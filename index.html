@@ -79,10 +79,20 @@
     }
     
     #tela-jogo {
-  background-image: url('fundo-jogo.jpg'); 
-  background-size: cover;                  /* cobre toda a tela proporcionalmente */
-  background-position: center;             /* centraliza a imagem */
-  background-repeat: no-repeat;            /* impede que ela repita */
+  display: none;
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('fundo-jogo.png'); /* Troque pelo nome da sua imagem */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: black;
+  font-size: 32px;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 4;
 }
 
 /* Computador estilizado */
@@ -282,6 +292,18 @@ height: 250px; /* ou a altura que quiser */
   z-index: 1000;
 }
 
+ @keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-5px, 2px); }
+  40% { transform: translate(5px, -2px); }
+  60% { transform: translate(-3px, 3px); }
+  80% { transform: translate(3px, -3px); }
+  100% { transform: translate(0); }
+}
+.glitch {
+  animation: glitch 0.2s steps(2, end) 5;
+}
+
   </style>
 </head>
 <body>
@@ -341,6 +363,11 @@ height: 250px; /* ou a altura que quiser */
   box-shadow: inset 0 0 60px 20px rgba(255, 255, 255, 0.15);
 ">
   <pre id="texto-pudinator"></pre>
+  <div id="pudim-revela" style="display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+  <img id="icone-pudim" src="PUDINATOR-IA.png" width="100" height="100" style="opacity: 0; transition: opacity 1s; filter: drop-shadow(0 0 5px #0ff) drop-shadow(0 0 10px #0ff);">
+  <div id="fala-pudim" style="margin-top: 20px; font-size: 24px; color: #0ff; text-shadow: 0 0 5px #0ff; opacity: 0; transition: opacity 1s;">Eu sou PUDINATOR-IA.</div>
+</div>
+  <canvas id="particulas-pudinator" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></canvas>
 </div>
 
   <!-- Tela do jogo -->
@@ -411,7 +438,6 @@ if (localStorage.getItem("estadoJogo")) {
 }
 
 function mostrarIntroPudinator() {
-  // Força fullscreen e orientação logo no início
   const tela = document.documentElement;
   if (tela.requestFullscreen) {
     tela.requestFullscreen().then(() => {
@@ -421,7 +447,6 @@ function mostrarIntroPudinator() {
     travarOrientacaoPaisagem();
   }
 
-  // Mostra a intro PUDINATOR
   const telaP = document.getElementById("tela-pudinator");
   const texto = document.getElementById("texto-pudinator");
 
@@ -438,6 +463,7 @@ function mostrarIntroPudinator() {
   let indexLetra = 0;
 
   telaP.style.display = "flex";
+  iniciarParticulasPudinator(); // ativa partículas escuras
   texto.textContent = "";
 
   function digitarProximaLetra() {
@@ -454,12 +480,35 @@ function mostrarIntroPudinator() {
         setTimeout(digitarProximaLetra, 600);
       }
     } else {
+      // Limpa o texto e faz o glitch
+texto.textContent = ""; // <- remove o texto
+telaP.classList.add("glitch");
+
       setTimeout(() => {
-        telaP.style.display = "none";
-        document.getElementById("tela-jogo").style.display = "flex";
-        document.getElementById("contador-dados").style.display = "block";
-        document.getElementById("icone-som").style.display = "none";
-      }, 1000);
+        telaP.classList.remove("glitch");
+
+        // Mostra o ícone e fala do pudim
+        const pudim = document.getElementById("pudim-revela");
+        const icone = document.getElementById("icone-pudim");
+        const fala = document.getElementById("fala-pudim");
+
+        pudim.style.display = "flex";
+        setTimeout(() => {
+          icone.style.opacity = "1";
+        }, 200);
+
+        setTimeout(() => {
+          fala.style.opacity = "1";
+        }, 1000);
+
+        // Espera e vai para o jogo
+        setTimeout(() => {
+          telaP.style.display = "none";
+          document.getElementById("tela-jogo").style.display = "flex";
+          document.getElementById("contador-dados").style.display = "block";
+          document.getElementById("icone-som").style.display = "none";
+        }, 4000);
+      }, 400); // tempo do glitch
     }
   }
 
@@ -813,6 +862,49 @@ function fecharSucesso() {
     }).catch(function(err) {
       console.log("Erro ao registrar Service Worker", err);
     });
+}
+
+ // Partículas escuras para a intro PUDINATOR
+function iniciarParticulasPudinator() {
+  const canvasP = document.getElementById("particulas-pudinator");
+  const ctxP = canvasP.getContext("2d");
+
+  canvasP.width = window.innerWidth;
+  canvasP.height = window.innerHeight;
+
+  const particulasPretas = [];
+  const total = 40;
+
+  for (let i = 0; i < total; i++) {
+    particulasPretas.push({
+      x: Math.random() * canvasP.width,
+      y: Math.random() * canvasP.height,
+      size: Math.random() * 2 + 1,
+      speedX: (Math.random() - 0.5) * 0.5,
+      speedY: (Math.random() - 0.5) * 0.5,
+    });
+  }
+
+  function animar() {
+    ctxP.clearRect(0, 0, canvasP.width, canvasP.height);
+    ctxP.fillStyle = "rgba(50, 50, 50, 0.3)";
+
+    particulasPretas.forEach(p => {
+      ctxP.beginPath();
+      ctxP.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctxP.fill();
+
+      p.x += p.speedX;
+      p.y += p.speedY;
+
+      if (p.x < 0 || p.x > canvasP.width) p.speedX *= -1;
+      if (p.y < 0 || p.y > canvasP.height) p.speedY *= -1;
+    });
+
+    requestAnimationFrame(animar);
+  }
+
+  animar();
 }
 
  window.addEventListener("beforeunload", salvarEstado);
