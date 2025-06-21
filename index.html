@@ -292,18 +292,6 @@ height: 250px; /* ou a altura que quiser */
   z-index: 1000;
 }
 
- @keyframes glitch {
-  0% { transform: translate(0); }
-  20% { transform: translate(-5px, 2px); }
-  40% { transform: translate(5px, -2px); }
-  60% { transform: translate(-3px, 3px); }
-  80% { transform: translate(3px, -3px); }
-  100% { transform: translate(0); }
-}
-.glitch {
-  animation: glitch 0.2s steps(2, end) 5;
-}
-
   </style>
 </head>
 <body>
@@ -365,7 +353,7 @@ height: 250px; /* ou a altura que quiser */
   <pre id="texto-pudinator"></pre>
   <div id="pudim-revela" style="display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
   <img id="icone-pudim" src="PUDINATOR-IA.png" width="170" height="160" style="opacity: 0; transition: opacity 1s; filter: drop-shadow(0 0 5px #0ff) drop-shadow(0 0 10px #0ff);">
-  <div id="fala-pudim" style="margin-top: 10px; font-size: 24px; color: #0ff; text-shadow: 0 0 5px #0ff; opacity: 0; transition: opacity 1s;">Eu sou PUDINATOR-IA.</div>
+  <div id="fala-pudim" style="margin-top: 20px; font-size: 24px; color: #0ff; text-shadow: 0 0 5px #0ff; opacity: 0; transition: opacity 1s;">Eu sou PUDINATOR-IA.</div>
 </div>
   <canvas id="particulas-pudinator" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></canvas>
 </div>
@@ -480,35 +468,55 @@ function mostrarIntroPudinator() {
         setTimeout(digitarProximaLetra, 600);
       }
     } else {
-      // Limpa o texto e faz o glitch
-texto.textContent = ""; // <- remove o texto
-telaP.classList.add("glitch");
+      // Terminou de digitar tudo, agora toca o vídeo
+      texto.textContent = "";
 
-      setTimeout(() => {
-        telaP.classList.remove("glitch");
+      const video = document.getElementById("pudinator-glith");
+      video.style.display = "block";
+      video.currentTime = 0;
+      video.muted = true;
+      video.playsInline = true;
 
-        // Mostra o ícone e fala do pudim
+      // Aguarda o vídeo estar carregado antes de tocar
+      const tentarTocar = () => {
+        if (video.readyState >= 3) {
+          video.play().catch((erro) => {
+            console.warn("Erro ao iniciar vídeo:", erro);
+            continuarDepoisDoVideo();
+          });
+        } else {
+          setTimeout(tentarTocar, 50);
+        }
+      };
+
+      tentarTocar();
+
+      const jaFoi = { valor: false };
+
+      function continuarDepoisDoVideo() {
+        if (jaFoi.valor) return;
+        jaFoi.valor = true;
+
+        video.style.display = "none";
+
         const pudim = document.getElementById("pudim-revela");
         const icone = document.getElementById("icone-pudim");
         const fala = document.getElementById("fala-pudim");
 
         pudim.style.display = "flex";
-        setTimeout(() => {
-          icone.style.opacity = "1";
-        }, 200);
+        setTimeout(() => icone.style.opacity = "1", 200);
+        setTimeout(() => fala.style.opacity = "1", 1000);
 
         setTimeout(() => {
-          fala.style.opacity = "1";
-        }, 1000);
-
-        // Espera e vai para o jogo
-        setTimeout(() => {
-          telaP.style.display = "none";
+          document.getElementById("tela-pudinator").style.display = "none";
           document.getElementById("tela-jogo").style.display = "flex";
           document.getElementById("contador-dados").style.display = "block";
           document.getElementById("icone-som").style.display = "none";
         }, 4000);
-      }, 400); // tempo do glitch
+      }
+
+      video.onended = continuarDepoisDoVideo;
+      setTimeout(continuarDepoisDoVideo, 5000); // fallback se o onended falhar
     }
   }
 
@@ -939,5 +947,11 @@ function iniciarParticulasPudinator() {
     <button onclick="fecharSucesso()" style="margin-top: 15px; background: #0a0; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 5px;">OK</button>
   </div>
 </div>
+<!-- Vídeo de introdução -->
+<video id="pudinator-glith" autoplay muted playsinline preload="auto"
+  style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: 10001;">
+  <source src="glith.mp4" type="video/mp4">
+  Seu navegador não suporta vídeo.
+</video>
 </body>
 </html>
