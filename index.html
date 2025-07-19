@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jogo Simples</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: white;
+    }
+
+    .tela {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+
+    .ativa {
+      display: flex;
+    }
+
+    .botao {
+      padding: 1em 2em;
+      margin: 1em;
+      background: #c62828;
+      color: white;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+
+    .jogo-container {
+      width: 100%;
+      height: 100vh;
+      background: #87ceeb;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chao {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 100px;
+      background: black;
+    }
+
+    .jogador {
+  position: absolute;
+  bottom: 93px;
+  left: 50px;
+  width: 50px;
+  height: 50px;
+  background-image: url('jogador.png');
+  background-size: cover; /* para cobrir todo o elemento */
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scaleX(1); /* valor inicial */
+  transition: transform 0.1s linear;
+}
+
+    /* CONTROLES */
+    .controles-esquerda {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .botao-controle {
+      width: 60px;
+      height: 60px;
+      background-color: rgba(128, 128, 128, 0.3);
+      border: none;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .botao-controle svg {
+      width: 30px;
+      height: 30px;
+      fill: black;
+    }
+  </style>
+</head>
+<body>
+  <div id="menu" class="tela ativa">
+    <button class="botao" onclick="iniciarJogo()">Começar</button>
+    <button class="botao" onclick="mostrarTela('config')">Config</button>
+  </div>
+
+  <div id="config" class="tela">
+    <h1>Fazendo...</h1>
+  </div>
+
+  <div id="jogo" class="tela">
+    <div class="jogo-container">
+      <div class="jogador" id="jogador"></div>
+      <div class="chao"></div>
+
+      <!-- Botões de andar no canto esquerdo -->
+      <div class="controles-esquerda">
+        <button class="botao-controle" id="esquerda">
+          <!-- seta esquerda -->
+          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="botao-controle" id="direita">
+          <!-- seta direita -->
+          <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function mostrarTela(id) {
+      document.querySelectorAll(".tela").forEach(tela => {
+        tela.classList.remove("ativa");
+      });
+      document.getElementById(id).classList.add("ativa");
+    }
+
+    const jogador = document.getElementById("jogador");
+    let posX = 50;
+
+    function mover(direcao) {
+  if (direcao === "esquerda") {
+    posX -= 5;
+    jogador.style.transform = "scaleX(-1)";
+  }
+  if (direcao === "direita") {
+    posX += 5;
+    jogador.style.transform = "scaleX(1)";
+  }
+
+  // Impede o jogador de sair da tela
+  posX = Math.max(0, Math.min(posX, window.innerWidth - 50));
+  jogador.style.left = posX + "px";
+}
+
+    function iniciarJogo() {
+      const elemento = document.documentElement;
+      if (elemento.requestFullscreen) {
+        elemento.requestFullscreen();
+      } else if (elemento.webkitRequestFullscreen) {
+        elemento.webkitRequestFullscreen();
+      } else if (elemento.msRequestFullscreen) {
+        elemento.msRequestFullscreen();
+      }
+
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch((err) => {
+          console.warn("Não foi possível travar a orientação:", err);
+        });
+      }
+
+      mostrarTela('jogo');
+    }
+
+    let andandoEsq = false;
+    let andandoDir = false;
+
+    setInterval(() => {
+      if (andandoEsq) mover("esquerda");
+      if (andandoDir) mover("direita");
+    }, 16);
+
+    const esquerdaBtn = document.getElementById("esquerda");
+    const direitaBtn = document.getElementById("direita");
+
+    function ativarEsquerda() {
+      andandoEsq = true;
+      andandoDir = false;
+    }
+
+    function ativarDireita() {
+      andandoDir = true;
+      andandoEsq = false;
+    }
+
+    function pararEsquerda() {
+      andandoEsq = false;
+    }
+
+    function pararDireita() {
+      andandoDir = false;
+    }
+
+    let controleAtivo = false;
+
+    function atualizarMovimentoPelaPosicao(x, y) {
+      const elem = document.elementFromPoint(x, y);
+      if (!elem) {
+        andandoEsq = false;
+        andandoDir = false;
+        return;
+      }
+
+      // Só verifica esquerda/direita, pois pulo foi removido
+      let el = elem;
+      while (el && el !== document.body) {
+        if (el.id === "esquerda") {
+          andandoEsq = true;
+          andandoDir = false;
+          return;
+        }
+        if (el.id === "direita") {
+          andandoDir = true;
+          andandoEsq = false;
+          return;
+        }
+        el = el.parentElement;
+      }
+
+      andandoEsq = false;
+      andandoDir = false;
+    }
+
+    function touchStartHandler(e) {
+      controleAtivo = true;
+      const touch = e.touches[0];
+      atualizarMovimentoPelaPosicao(touch.clientX, touch.clientY);
+    }
+
+    function touchMoveHandler(e) {
+      if (!controleAtivo) return;
+      const touch = e.touches[0];
+      atualizarMovimentoPelaPosicao(touch.clientX, touch.clientY);
+    }
+
+    function touchEndHandler(e) {
+      controleAtivo = false;
+      andandoEsq = false;
+      andandoDir = false;
+    }
+
+    document.addEventListener("touchstart", touchStartHandler);
+    document.addEventListener("touchmove", touchMoveHandler);
+    document.addEventListener("touchend", touchEndHandler);
+  </script>
+</body>
+</html>
