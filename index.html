@@ -35,12 +35,15 @@
     }
 
     .jogo-container {
-      width: 100%;
-      height: 100vh;
-      background: #87ceeb;
-      position: relative;
-      overflow: hidden;
-    }
+  width: 100%;
+  height: 100vh;
+  background-image: url('layout-fundo.png'); /* substitua pelo nome da sua imagem */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden;
+}
 
     .chao {
       position: absolute;
@@ -106,7 +109,7 @@
   <div id="jogo" class="tela">
     <div class="jogo-container">
       <div class="jogador" id="jogador"></div>
-      <div class="chao"></div>
+      <!-- <div class="chao"></div> -->
 
       <!-- Botões de andar no canto esquerdo -->
       <div class="controles-esquerda">
