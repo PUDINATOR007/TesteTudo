@@ -57,13 +57,13 @@
   position: absolute;
   bottom: 93px;
   left: 50px;
-  width: 50px;
-  height: 50px;
-  background-image: url('jogador.png');
-  background-size: cover; /* para cobrir todo o elemento */
-  background-position: center;
+  width: 64px;
+  height: 64px;
+  background-image: url('sprites-correr.png');
+  background-size: 192px 64px; /* 64 * 3 frames */
   background-repeat: no-repeat;
-  transform: scaleX(1); /* valor inicial */
+  background-position: 0 0;
+  transform: scaleX(1);
   transition: transform 0.1s linear;
 }
 
@@ -127,6 +127,25 @@
   </div>
 
   <script>
+  	let frame = 0;
+let animando = false;
+const totalFrames = 3;
+
+    function animarSprite() {
+  if (!andandoEsq && !andandoDir) {
+    animando = false;
+    return;
+  }
+
+  animando = true;
+  frame = (frame + 1) % totalFrames;
+  jogador.style.backgroundPosition = `-${frame * 64}px 0`;
+
+  setTimeout(() => {
+    if (animando) animarSprite();
+  }, 120); // tempo entre os quadros
+}
+  
     function mostrarTela(id) {
       document.querySelectorAll(".tela").forEach(tela => {
         tela.classList.remove("ativa");
@@ -175,9 +194,11 @@
     let andandoDir = false;
 
     setInterval(() => {
-      if (andandoEsq) mover("esquerda");
-      if (andandoDir) mover("direita");
-    }, 16);
+  if (andandoEsq || andandoDir) {
+    mover(andandoEsq ? "esquerda" : "direita");
+    if (!animando) animarSprite();
+  }
+}, 16);
 
     const esquerdaBtn = document.getElementById("esquerda");
     const direitaBtn = document.getElementById("direita");
@@ -243,10 +264,13 @@
     }
 
     function touchEndHandler(e) {
-      controleAtivo = false;
-      andandoEsq = false;
-      andandoDir = false;
-    }
+  controleAtivo = false;
+  andandoEsq = false;
+  andandoDir = false;
+  animando = false;
+  frame = 0;
+  jogador.style.backgroundPosition = `0 0`;
+}
 
     document.addEventListener("touchstart", touchStartHandler);
     document.addEventListener("touchmove", touchMoveHandler);
