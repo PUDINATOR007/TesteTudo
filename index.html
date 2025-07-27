@@ -1,183 +1,234 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jogo de Navinha</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nave Shooter Mobile</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Esconde barras de rolagem */
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Garante que o corpo ocupa a altura total da tela */
+        }
 
-    body {
-      background: black;
-      overflow: hidden;
-      font-family: sans-serif;
-    }
+        #gameCanvas {
+            background-color: #111;
+            border: 2px solid #0f0;
+            touch-action: none; /* Previne o zoom padrão do navegador em dispositivos móveis */
+        }
 
-    canvas {
-      display: block;
-      margin: auto;
-      background: #111;
-      touch-action: none;
-    }
-
-    #game-over {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 2rem;
-      display: none;
-      text-align: center;
-    }
-
-    #game-over button {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-    }
-  </style>
+        /* Estilos adicionais para feedback visual ou controles se necessário */
+    </style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
-  <div id="game-over">
-    <div>ðŸ’¥ Fim de Jogo!</div>
-    <button onclick="location.reload()">Jogar Novamente</button>
-  </div>
+    <canvas id="gameCanvas"></canvas>
 
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    let width = window.innerWidth;
-    let height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-    // Nave
-    const player = {
-      x: width / 2 - 25,
-      y: height - 80,
-      w: 50,
-      h: 50,
-      speed: 10,
-    };
+        // Configurações do jogo
+        const GAME_WIDTH = 320; // Largura do jogo para mobile (pode ser ajustado)
+        const GAME_HEIGHT = 480; // Altura do jogo para mobile (pode ser ajustado)
+        const PLAYER_SPEED = 5;
+        const BULLET_SPEED = 7;
+        const ENEMY_SPEED = 2;
+        const SHOOT_INTERVAL = 200; // Milissegundos entre tiros
 
-    const bullets = [];
-    const enemies = [];
-    let gameOver = false;
+        // Redimensiona o canvas para caber na tela mantendo a proporção
+        function resizeCanvas() {
+            const aspectRatio = GAME_WIDTH / GAME_HEIGHT;
+            let newWidth, newHeight;
 
-    function drawPlayer() {
-      ctx.fillStyle = "lime";
-      ctx.fillRect(player.x, player.y, player.w, player.h);
-    }
-
-    function drawBullet(bullet) {
-      ctx.fillStyle = "yellow";
-      ctx.fillRect(bullet.x, bullet.y, bullet.w, bullet.h);
-    }
-
-    function drawEnemy(enemy) {
-      ctx.fillStyle = "red";
-      ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
-    }
-
-    function shoot() {
-      bullets.push({
-        x: player.x + player.w / 2 - 5,
-        y: player.y,
-        w: 10,
-        h: 20,
-        speed: 10,
-      });
-    }
-
-    function spawnEnemy() {
-      enemies.push({
-        x: Math.random() * (width - 40),
-        y: -40,
-        w: 40,
-        h: 40,
-        speed: 2 + Math.random() * 3,
-      });
-    }
-
-    function checkCollision(a, b) {
-      return (
-        a.x < b.x + b.w &&
-        a.x + a.w > b.x &&
-        a.y < b.y + b.h &&
-        a.y + a.h > b.y
-      );
-    }
-
-    function update() {
-      if (gameOver) return;
-
-      ctx.clearRect(0, 0, width, height);
-      drawPlayer();
-
-      // Tiros
-      bullets.forEach((bullet, index) => {
-        bullet.y -= bullet.speed;
-        if (bullet.y < 0) bullets.splice(index, 1);
-        else drawBullet(bullet);
-      });
-
-      // Inimigos
-      enemies.forEach((enemy, eIndex) => {
-        enemy.y += enemy.speed;
-        if (enemy.y > height) enemies.splice(eIndex, 1);
-        else {
-          drawEnemy(enemy);
-
-          // ColisÃ£o com jogador
-          if (checkCollision(enemy, player)) {
-            document.getElementById("game-over").style.display = "block";
-            gameOver = true;
-          }
-
-          // ColisÃ£o com tiro
-          bullets.forEach((bullet, bIndex) => {
-            if (checkCollision(enemy, bullet)) {
-              bullets.splice(bIndex, 1);
-              enemies.splice(eIndex, 1);
+            if (window.innerWidth / window.innerHeight > aspectRatio) {
+                newHeight = window.innerHeight;
+                newWidth = newHeight * aspectRatio;
+            } else {
+                newWidth = window.innerWidth;
+                newHeight = newWidth / aspectRatio;
             }
-          });
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            // Ajusta a escala do contexto para que o desenho interno seja consistente
+            ctx.scale(newWidth / GAME_WIDTH, newHeight / GAME_HEIGHT);
         }
-      });
 
-      requestAnimationFrame(update);
-    }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Chama no carregamento inicial
 
-    // Tiro automÃ¡tico
-    setInterval(() => {
-      if (!gameOver) shoot();
-    }, 400);
+        // Player
+        const player = {
+            x: GAME_WIDTH / 2 - 20,
+            y: GAME_HEIGHT - 60,
+            width: 40,
+            height: 40,
+            color: '#00f'
+        };
 
-    // Spawn de inimigos
-    setInterval(() => {
-      if (!gameOver) spawnEnemy();
-    }, 1000);
+        // Balas do jogador
+        const bullets = [];
 
-    // Movimento por toque
-    canvas.addEventListener("touchstart", (e) => {
-      const touchX = e.touches[0].clientX;
-      if (touchX < width / 2) {
-        player.x -= player.speed;
-      } else {
-        player.x += player.speed;
-      }
+        // Inimigos
+        const enemies = [];
+        let lastEnemySpawnTime = 0;
+        const ENEMY_SPAWN_INTERVAL = 1500; // Milissegundos
 
-      // Limites
-      if (player.x < 0) player.x = 0;
-      if (player.x + player.w > width) player.x = width - player.w;
-    });
+        // Entrada do usuário (touch/mouse/teclado)
+        let touchX = player.x + player.width / 2; // Posição inicial do toque para centralizar a nave
+        let isTouching = false; // Para controle de toque contínuo
 
-    update();
-  </script>
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Previne o comportamento padrão do navegador
+            isTouching = true;
+            touchX = e.touches[0].clientX / (canvas.width / GAME_WIDTH); // Converte para coordenadas do jogo
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (isTouching) {
+                touchX = e.touches[0].clientX / (canvas.width / GAME_WIDTH);
+            }
+        });
+
+        canvas.addEventListener('touchend', () => {
+            isTouching = false;
+        });
+
+        // Para testes em desktop
+        canvas.addEventListener('mousedown', (e) => {
+            isTouching = true;
+            touchX = e.clientX / (canvas.width / GAME_WIDTH);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isTouching) {
+                touchX = e.clientX / (canvas.width / GAME_WIDTH);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isTouching = false;
+        });
+
+
+        // Controle do tempo de tiro
+        let lastShotTime = 0;
+
+        function update(deltaTime) {
+            // Mover o jogador em direção ao touchX
+            if (Math.abs((player.x + player.width / 2) - touchX) > PLAYER_SPEED) {
+                if ((player.x + player.width / 2) < touchX) {
+                    player.x += PLAYER_SPEED;
+                } else {
+                    player.x -= PLAYER_SPEED;
+                }
+            }
+            // Limitar a posição do jogador dentro da tela
+            player.x = Math.max(0, Math.min(player.x, GAME_WIDTH - player.width));
+
+            // Disparar balas
+            if (Date.now() - lastShotTime > SHOOT_INTERVAL) {
+                bullets.push({
+                    x: player.x + player.width / 2 - 2,
+                    y: player.y,
+                    width: 4,
+                    height: 10,
+                    color: '#ff0'
+                });
+                lastShotTime = Date.now();
+            }
+
+            // Atualizar balas
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].y -= BULLET_SPEED;
+                if (bullets[i].y < 0) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // Criar inimigos
+            if (Date.now() - lastEnemySpawnTime > ENEMY_SPAWN_INTERVAL) {
+                enemies.push({
+                    x: Math.random() * (GAME_WIDTH - 30), // Largura do inimigo
+                    y: -30, // Começa acima da tela
+                    width: 30,
+                    height: 30,
+                    color: '#f00'
+                });
+                lastEnemySpawnTime = Date.now();
+            }
+
+            // Atualizar inimigos
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].y += ENEMY_SPEED;
+                if (enemies[i].y > GAME_HEIGHT) {
+                    enemies.splice(i, 1); // Remove inimigo se sair da tela
+                    // Aqui você poderia adicionar lógica para game over se um inimigo passar
+                }
+            }
+
+            // Detectar colisões
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const bullet = bullets[i];
+                    const enemy = enemies[j];
+
+                    // Colisão simples de retângulo
+                    if (bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y) {
+                        
+                        bullets.splice(i, 1); // Remove a bala
+                        enemies.splice(j, 1); // Remove o inimigo
+                        // Sai do loop interno para evitar erros de índice após remover
+                        break; 
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            // Limpa o canvas
+            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            // Desenha o jogador
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Desenha as balas
+            ctx.fillStyle = '#ff0';
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+
+            // Desenha os inimigos
+            ctx.fillStyle = '#f00';
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+        }
+
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            update(deltaTime);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Inicia o loop do jogo
+        requestAnimationFrame(gameLoop);
+
+    </script>
 </body>
 </html>
