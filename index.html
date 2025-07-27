@@ -3,278 +3,181 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jogo Simples</title>
+  <title>Jogo de Navinha</title>
   <style>
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
-      font-family: sans-serif;
-      background: white;
+      padding: 0;
     }
 
-    .tela {
-      display: none;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
-    }
-
-    .ativa {
-      display: flex;
-    }
-
-    .botao {
-      padding: 1em 2em;
-      margin: 1em;
-      background: #c62828;
-      color: white;
-      border: none;
-      font-size: 1.2em;
-      cursor: pointer;
-      border-radius: 8px;
-    }
-
-    .jogo-container {
-  width: 100%;
-  height: 100vh;
-  background-image: url('layout-fundo.png'); /* substitua pelo nome da sua imagem */
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  position: relative;
-  overflow: hidden;
-}
-
-    .chao {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      height: 100px;
+    body {
       background: black;
+      overflow: hidden;
+      font-family: sans-serif;
     }
 
-    .jogador {
-  position: absolute;
-  bottom: 93px;
-  left: 50px;
-  width: 64px;
-  height: 64px;
-  background-image: url('sprites-correr.png');
-  background-size: 192px 64px; /* 64 * 3 frames */
-  background-repeat: no-repeat;
-  background-position: 0 0;
-  transform: scaleX(1);
-  transition: transform 0.1s linear;
-}
+    canvas {
+      display: block;
+      margin: auto;
+      background: #111;
+      touch-action: none;
+    }
 
-    /* CONTROLES */
-    .controles-esquerda {
+    #game-over {
       position: absolute;
-      bottom: 20px;
-      left: 20px;
-      display: flex;
-      gap: 10px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 2rem;
+      display: none;
+      text-align: center;
     }
 
-    .botao-controle {
-      width: 60px;
-      height: 60px;
-      background-color: rgba(128, 128, 128, 0.3);
-      border: none;
-      border-radius: 10px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .botao-controle svg {
-      width: 30px;
-      height: 30px;
-      fill: black;
+    #game-over button {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
-  <div id="menu" class="tela ativa">
-    <button class="botao" onclick="iniciarJogo()">Começar</button>
-    <button class="botao" onclick="mostrarTela('config')">Config</button>
-  </div>
-
-  <div id="config" class="tela">
-    <h1>Fazendo...</h1>
-  </div>
-
-  <div id="jogo" class="tela">
-    <div class="jogo-container">
-      <div class="jogador" id="jogador"></div>
-      <!-- <div class="chao"></div> -->
-
-      <!-- Botões de andar no canto esquerdo -->
-      <div class="controles-esquerda">
-        <button class="botao-controle" id="esquerda">
-          <!-- seta esquerda -->
-          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <button class="botao-controle" id="direita">
-          <!-- seta direita -->
-          <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-      </div>
-
-    </div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="game-over">
+    <div>💥 Fim de Jogo!</div>
+    <button onclick="location.reload()">Jogar Novamente</button>
   </div>
 
   <script>
-  	let frame = 0;
-let animando = false;
-const totalFrames = 3;
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
 
-    function animarSprite() {
-  if (!andandoEsq && !andandoDir) {
-    animando = false;
-    return;
-  }
+    // Nave
+    const player = {
+      x: width / 2 - 25,
+      y: height - 80,
+      w: 50,
+      h: 50,
+      speed: 10,
+    };
 
-  animando = true;
-  frame = (frame + 1) % totalFrames;
-  jogador.style.backgroundPosition = `-${frame * 64}px 0`;
+    const bullets = [];
+    const enemies = [];
+    let gameOver = false;
 
-  setTimeout(() => {
-    if (animando) animarSprite();
-  }, 120); // tempo entre os quadros
-}
-  
-    function mostrarTela(id) {
-      document.querySelectorAll(".tela").forEach(tela => {
-        tela.classList.remove("ativa");
+    function drawPlayer() {
+      ctx.fillStyle = "lime";
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+    }
+
+    function drawBullet(bullet) {
+      ctx.fillStyle = "yellow";
+      ctx.fillRect(bullet.x, bullet.y, bullet.w, bullet.h);
+    }
+
+    function drawEnemy(enemy) {
+      ctx.fillStyle = "red";
+      ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+    }
+
+    function shoot() {
+      bullets.push({
+        x: player.x + player.w / 2 - 5,
+        y: player.y,
+        w: 10,
+        h: 20,
+        speed: 10,
       });
-      document.getElementById(id).classList.add("ativa");
     }
 
-    const jogador = document.getElementById("jogador");
-    let posX = 50;
-
-    function mover(direcao) {
-  if (direcao === "esquerda") {
-    posX -= 5;
-    jogador.style.transform = "scaleX(-1)";
-  }
-  if (direcao === "direita") {
-    posX += 5;
-    jogador.style.transform = "scaleX(1)";
-  }
-
-  // Impede o jogador de sair da tela
-  posX = Math.max(0, Math.min(posX, window.innerWidth - 50));
-  jogador.style.left = posX + "px";
-}
-
-    function iniciarJogo() {
-      const elemento = document.documentElement;
-      if (elemento.requestFullscreen) {
-        elemento.requestFullscreen();
-      } else if (elemento.webkitRequestFullscreen) {
-        elemento.webkitRequestFullscreen();
-      } else if (elemento.msRequestFullscreen) {
-        elemento.msRequestFullscreen();
-      }
-
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch((err) => {
-          console.warn("Não foi possível travar a orientação:", err);
-        });
-      }
-
-      mostrarTela('jogo');
+    function spawnEnemy() {
+      enemies.push({
+        x: Math.random() * (width - 40),
+        y: -40,
+        w: 40,
+        h: 40,
+        speed: 2 + Math.random() * 3,
+      });
     }
 
-    let andandoEsq = false;
-    let andandoDir = false;
+    function checkCollision(a, b) {
+      return (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      );
+    }
 
+    function update() {
+      if (gameOver) return;
+
+      ctx.clearRect(0, 0, width, height);
+      drawPlayer();
+
+      // Tiros
+      bullets.forEach((bullet, index) => {
+        bullet.y -= bullet.speed;
+        if (bullet.y < 0) bullets.splice(index, 1);
+        else drawBullet(bullet);
+      });
+
+      // Inimigos
+      enemies.forEach((enemy, eIndex) => {
+        enemy.y += enemy.speed;
+        if (enemy.y > height) enemies.splice(eIndex, 1);
+        else {
+          drawEnemy(enemy);
+
+          // Colisão com jogador
+          if (checkCollision(enemy, player)) {
+            document.getElementById("game-over").style.display = "block";
+            gameOver = true;
+          }
+
+          // Colisão com tiro
+          bullets.forEach((bullet, bIndex) => {
+            if (checkCollision(enemy, bullet)) {
+              bullets.splice(bIndex, 1);
+              enemies.splice(eIndex, 1);
+            }
+          });
+        }
+      });
+
+      requestAnimationFrame(update);
+    }
+
+    // Tiro automático
     setInterval(() => {
-  if (andandoEsq || andandoDir) {
-    mover(andandoEsq ? "esquerda" : "direita");
-    if (!animando) animarSprite();
-  }
-}, 16);
+      if (!gameOver) shoot();
+    }, 400);
 
-    const esquerdaBtn = document.getElementById("esquerda");
-    const direitaBtn = document.getElementById("direita");
+    // Spawn de inimigos
+    setInterval(() => {
+      if (!gameOver) spawnEnemy();
+    }, 1000);
 
-    function ativarEsquerda() {
-      andandoEsq = true;
-      andandoDir = false;
-    }
-
-    function ativarDireita() {
-      andandoDir = true;
-      andandoEsq = false;
-    }
-
-    function pararEsquerda() {
-      andandoEsq = false;
-    }
-
-    function pararDireita() {
-      andandoDir = false;
-    }
-
-    let controleAtivo = false;
-
-    function atualizarMovimentoPelaPosicao(x, y) {
-      const elem = document.elementFromPoint(x, y);
-      if (!elem) {
-        andandoEsq = false;
-        andandoDir = false;
-        return;
+    // Movimento por toque
+    canvas.addEventListener("touchstart", (e) => {
+      const touchX = e.touches[0].clientX;
+      if (touchX < width / 2) {
+        player.x -= player.speed;
+      } else {
+        player.x += player.speed;
       }
 
-      // Só verifica esquerda/direita, pois pulo foi removido
-      let el = elem;
-      while (el && el !== document.body) {
-        if (el.id === "esquerda") {
-          andandoEsq = true;
-          andandoDir = false;
-          return;
-        }
-        if (el.id === "direita") {
-          andandoDir = true;
-          andandoEsq = false;
-          return;
-        }
-        el = el.parentElement;
-      }
+      // Limites
+      if (player.x < 0) player.x = 0;
+      if (player.x + player.w > width) player.x = width - player.w;
+    });
 
-      andandoEsq = false;
-      andandoDir = false;
-    }
-
-    function touchStartHandler(e) {
-      controleAtivo = true;
-      const touch = e.touches[0];
-      atualizarMovimentoPelaPosicao(touch.clientX, touch.clientY);
-    }
-
-    function touchMoveHandler(e) {
-      if (!controleAtivo) return;
-      const touch = e.touches[0];
-      atualizarMovimentoPelaPosicao(touch.clientX, touch.clientY);
-    }
-
-    function touchEndHandler(e) {
-  controleAtivo = false;
-  andandoEsq = false;
-  andandoDir = false;
-  animando = false;
-  frame = 0;
-  jogador.style.backgroundPosition = `0 0`;
-}
-
-    document.addEventListener("touchstart", touchStartHandler);
-    document.addEventListener("touchmove", touchMoveHandler);
-    document.addEventListener("touchend", touchEndHandler);
+    update();
   </script>
 </body>
 </html>
