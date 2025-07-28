@@ -1,226 +1,102 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Jogo de Navinha</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        canvas {
-            display: block;
-            max-width: 100%;
-            max-height: 100vh;
-        }
-        #score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-family: Arial, sans-serif;
-            font-size: 20px;
-        }
-        #gameOver {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: red;
-            font-family: Arial, sans-serif;
-            font-size: 30px;
-            display: none;
-            text-align: center;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Nave Shooter</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+    }
+  </style>
 </head>
 <body>
-    <div id="score">Pontos: 0</div>
-    <div id="gameOver">Game Over!<br>Toque para reiniciar</div>
-    <canvas id="gameCanvas"></canvas>
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('score');
-        const gameOverDisplay = document.getElementById('gameOver');
+  <canvas id="tela" width="400" height="600"></canvas>
+  <script>
+    const tela = document.getElementById('tela');
+    const ctx = tela.getContext('2d');
+    let nave = { x: 200, y: 500, largura: 50, altura: 50 };
+    let inimigos = [];
+    let tiros = [];
+    let pontos = 0;
 
-        // Ajusta o canvas para a tela do dispositivo
-        function resizeCanvas() {
-            canvas.width = Math.min(window.innerWidth, 400);
-            canvas.height = window.innerHeight;
+    function desenharNave() {
+      ctx.fillStyle = 'blue';
+      ctx.fillRect(nave.x, nave.y, nave.largura, nave.altura);
+    }
+
+    function desenharInimigos() {
+      for (let i = 0; i < inimigos.length; i++) {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(inimigos[i].x, inimigos[i].y, inimigos[i].largura, inimigos[i].altura);
+      }
+    }
+
+    function desenharTiros() {
+      for (let i = 0; i < tiros.length; i++) {
+        ctx.fillStyle = 'green';
+        ctx.fillRect(tiros[i].x, tiros[i].y, tiros[i].largura, tiros[i].altura);
+      }
+    }
+
+    function atualizar() {
+      ctx.clearRect(0, 0, tela.width, tela.height);
+      desenharNave();
+      desenharInimigos();
+      desenharTiros();
+
+      // Mover inimigos
+      for (let i = 0; i < inimigos.length; i++) {
+        inimigos[i].y += 2;
+        if (inimigos[i].y > tela.height) {
+          inimigos.splice(i, 1);
         }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+      }
 
-        // Objetos do jogo
-        const player = {
-            x: canvas.width / 2,
-            y: canvas.height - 50,
-            width: 30,
-            height: 30,
-            speed: 5,
-            bullets: []
-        };
-
-        let enemies = [];
-        let score = 0;
-        let gameOver = false;
-        let touchX = null;
-
-        // Controle por toque
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            touchX = e.touches[0].clientX;
-            if (gameOver) {
-                resetGame();
-            }
-        });
-
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            touchX = e.touches[0].clientX;
-        });
-
-        canvas.addEventListener('touchend', () => {
-            touchX = null;
-        });
-
-        // Criar inimigos
-        function spawnEnemy() {
-            enemies.push({
-                x: Math.random() * (canvas.width - 30),
-                y: 0,
-                width: 30,
-                height: 30,
-                speed: 2
-            });
+      // Mover tiros
+      for (let i = 0; i < tiros.length; i++) {
+        tiros[i].y -= 5;
+        if (tiros[i].y < 0) {
+          tiros.splice(i, 1);
         }
+      }
 
-        // Disparar
-        function shoot() {
-            player.bullets.push({
-                x: player.x + player.width / 2 - 2.5,
-                y: player.y,
-                width: 5,
-                height: 10,
-                speed: 7
-            });
+      // Colisão
+      for (let i = 0; i < inimigos.length; i++) {
+        for (let j = 0; j < tiros.length; j++) {
+          if (tiros[j].x + tiros[j].largura > inimigos[i].x &&
+              tiros[j].x < inimigos[i].x + inimigos[i].largura &&
+              tiros[j].y + tiros[j].altura > inimigos[i].y &&
+              tiros[j].y < inimigos[i].y + inimigos[i].altura) {
+            inimigos.splice(i, 1);
+            tiros.splice(j, 1);
+            pontos++;
+          }
         }
+      }
 
-        // Colisão
-        function checkCollision(rect1, rect2) {
-            return rect1.x < rect2.x + rect2.width &&
-                   rect1.x + rect1.width > rect2.x &&
-                   rect1.y < rect2.y + rect2.height &&
-                   rect1.y + rect1.height > rect2.y;
-        }
+      // Criar inimigos
+      if (Math.random() < 0.05) {
+        inimigos.push({ x: Math.random() * (tela.width - 50), y: 0, largura: 50, altura: 50 });
+      }
 
-        // Reiniciar jogo
-        function resetGame() {
-            player.x = canvas.width / 2;
-            player.y = canvas.height - 50;
-            player.bullets = [];
-            enemies = [];
-            score = 0;
-            gameOver = false;
-            gameOverDisplay.style.display = 'none';
-            scoreDisplay.textContent = `Pontos: ${score}`;
-            spawnEnemy();
-        }
+      ctx.font = '24px Arial';
+      ctx.fillStyle = 'black';
+      ctx.fillText(`Pontos: ${pontos}`, 10, 30);
 
-        // Loop do jogo
-        let lastTime = 0;
-        let shootTimer = 0;
-        let enemySpawnTimer = 0;
+      requestAnimationFrame(atualizar);
+    }
 
-        function gameLoop(timestamp) {
-            if (gameOver) return;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        nave.x -= 10;
+      } else if (e.key === 'ArrowRight') {
+        nave.x += 10;
+      } else if (e.key === ' ') {
+        tiros.push({ x: nave.x + nave.largura / 2, y: nave.y, largura: 10, altura: 20 });
+      }
+    });
 
-            const delta = timestamp - lastTime;
-            lastTime = timestamp;
-
-            // Atualizar posição do jogador
-            if (touchX !== null) {
-                let targetX = touchX - player.width / 2;
-                if (targetX < 0) targetX = 0;
-                if (targetX > canvas.width - player.width) targetX = canvas.width - player.width;
-                player.x += (targetX - player.x) * 0.1;
-            }
-
-            // Atualizar balas
-            player.bullets = player.bullets.filter(bullet => bullet.y > 0);
-            player.bullets.forEach(bullet => {
-                bullet.y -= bullet.speed;
-            });
-
-            // Atualizar inimigos
-            enemies = enemies.filter(enemy => enemy.y < canvas.height);
-            enemies.forEach(enemy => {
-                enemy.y += enemy.speed;
-                if (checkCollision(player, enemy)) {
-                    gameOver = true;
-                    gameOverDisplay.style.display = 'block';
-                }
-            });
-
-            // Verificar colisões entre balas e inimigos
-            player.bullets.forEach(bullet => {
-                enemies = enemies.filter(enemy => {
-                    if (checkCollision(bullet, enemy)) {
-                        score += 10;
-                        scoreDisplay.textContent = `Pontos: ${score}`;
-                        return false;
-                    }
-                    return true;
-                });
-            });
-
-            // Disparar automaticamente
-            shootTimer += delta;
-            if (shootTimer > 200) {
-                shoot();
-                shootTimer = 0;
-            }
-
-            // Gerar inimigos
-            enemySpawnTimer += delta;
-            if (enemySpawnTimer > 1000) {
-                spawnEnemy();
-                enemySpawnTimer = 0;
-            }
-
-            // Desenhar
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Desenhar jogador
-            ctx.fillStyle = 'white';
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-
-            // Desenhar balas
-            ctx.fillStyle = 'yellow';
-            player.bullets.forEach(bullet => {
-                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-            });
-
-            // Desenhar inimigos
-            ctx.fillStyle = 'red';
-            enemies.forEach(enemy => {
-                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-            });
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Iniciar jogo
-        spawnEnemy();
-        requestAnimationFrame(gameLoop);
-    </script>
+    atualizar();
+  </script>
 </body>
 </html>
